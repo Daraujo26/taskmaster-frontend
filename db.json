@@ -1,0 +1,46 @@
+{
+  "users": [
+    {
+      "id": 1,
+      "name": "David Araujo",
+      "company_name": "JsonMaster",
+      "email": "JsonMasters@gmail.com",
+      "password": "DavidAraujo26",
+      "phone_number": "484-544-1198",
+      "company_details": {
+        "company_occupation": "7",
+        "company_size": "1",
+        "company_revenue": "3",
+        "about_info": "My dog"
+      }
+    },
+    {
+      "id": 2,
+      "name": "John DOe",
+      "company_name": "JohnDoeINC",
+      "email": "Johndoe@gmail.com",
+      "password": "DOEJohn23!",
+      "phone_number": "4321131982",
+      "company_details": {
+        "company_occupation": "1",
+        "company_size": "1",
+        "company_revenue": "2",
+        "about_info": "John DOe knows"
+      }
+    },
+    {
+      "id": 3,
+      "name": "Giraffe Man",
+      "company_name": "Giraffe Corp",
+      "email": "Giraffewekeep@gmail.com",
+      "password": "Giraffesecret",
+      "phone_number": "4546754246",
+      "company_details": {
+        "company_occupation": "4",
+        "company_size": "2",
+        "company_revenue": "2",
+        "about_info": "Linked in"
+      }
+    }
+  ]
+}
