@@ -1,5 +1,12 @@
 import React, { useState } from "react";
-import { View, Text, SafeAreaView, StyleSheet, Pressable } from "react-native";
+import {
+  View,
+  Text,
+  SafeAreaView,
+  StyleSheet,
+  Pressable,
+  Button,
+} from "react-native";
 
 import { router, Link } from "expo-router";
 import { Image } from "expo-image";
@@ -8,11 +15,14 @@ import { AntDesign } from "@expo/vector-icons";
 import Colors from "@/src/constants/colors/colors";
 import TextField from "@/src/components/TextField";
 
+import { UserData } from "@/src/interfaces";
+
 function Index() {
   const [emailInputText, setEmailInputText] = useState("");
   const [passwordInputText, setPasswordInputText] = useState("");
 
-  const [error, setError] = useState<string | null>(null);
+  const [emailError, setEmailError] = useState<string | null>(null);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
 
   const handleBackButton = () => {
     router.back();
@@ -22,7 +32,36 @@ function Index() {
   };
 
   const handleLogin = () => {
-    router.navigate("/home");
+    setEmailError(null);
+
+    let re = /\S+@\S+\.\S+/;
+    let regex = /^[\+]?[(]?[0-9]{3}[)]?[-\s\.]?[0-9]{3}[-\s\.]?[0-9]{4,6}$/im;
+
+    if (!re.test(emailInputText) || regex.test(emailInputText)) {
+      setEmailError("Enter a valid email address");
+    }
+
+    if (re.test(emailInputText) && !regex.test(emailInputText)) {
+      fetch("http://localhost:3000/users/")
+        .then((resp) => resp.json())
+        .then((data) => {
+          const userData = data;
+
+          const user = userData.filter(
+            (user: { email: any; user: UserData }) =>
+              user["email"] === emailInputText
+          )[0];
+
+          if (user == undefined) {
+            console.log("Incorrect");
+          } else if (user["password"] === passwordInputText) {
+            console.log("Success");
+            router.navigate("/home/" + user.id);
+          } else {
+            console.log("Incorrect");
+          }
+        });
+    }
   };
 
   return (
@@ -46,7 +85,7 @@ function Index() {
             style={styles.EmailInput}
             value={emailInputText}
             label="Email"
-            errorText={error}
+            errorText={emailError}
             password={false}
             onChangeText={setEmailInputText}
           />
@@ -54,7 +93,7 @@ function Index() {
             style={styles.PasswordInput}
             value={passwordInputText}
             label="Password"
-            errorText={error}
+            errorText={passwordError}
             password={true}
             onChangeText={(text) => setPasswordInputText(text)}
           />
@@ -67,17 +106,31 @@ function Index() {
         </View>
       </View>
       <View style={styles.FooterWrapper}>
-        <Pressable
-          style={({ pressed }) => [
-            {
-              backgroundColor: pressed ? "grey" : Colors.primary,
-            },
-            styles.LoginButton,
-          ]}
-          onPress={handleLogin}
-        >
-          <Text style={styles.LoginText}>Log In</Text>
-        </Pressable>
+        {emailInputText == "" || passwordInputText == "" ? (
+          <Pressable
+            style={[
+              {
+                backgroundColor: Colors.secondary,
+              },
+              styles.LoginButton,
+            ]}
+            onPress={() => {}}
+          >
+            <Text style={styles.LoginText}>Log In</Text>
+          </Pressable>
+        ) : (
+          <Pressable
+            style={({ pressed }) => [
+              {
+                backgroundColor: pressed ? "grey" : Colors.primary,
+              },
+              styles.LoginButton,
+            ]}
+            onPress={handleLogin}
+          >
+            <Text style={styles.LoginText}>Log In</Text>
+          </Pressable>
+        )}
         <View style={{ paddingTop: 10, alignItems: "center" }}>
           <Text>
             Don't have an account?{" "}

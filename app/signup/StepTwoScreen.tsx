@@ -16,25 +16,21 @@ import Colors from "@/src/constants/colors/colors";
 import TextField from "@/src/components/TextField";
 import { Dropdown } from "react-native-element-dropdown";
 
-interface UserData {
-  name: string;
-  company_name: string;
-  email: string;
-  password: string;
-  phone_number: string;
-}
+import { UserData } from "@/src/interfaces";
+import CustomAlert from "@/src/components/CustomAlert";
 
 function Setup({ userData }: { userData: UserData | undefined }) {
-  let id: number;
+  const [alertVisible, setAlertVisible] = useState(false);
+  const [alertMessage, setAlertMessage] = useState("");
 
-  fetch("http://localhost:3000/users/")
-    .then((resp) => resp.json())
-    .then((data) => {
-      const userDatabase = data;
-      id = Math.max(...userDatabase.map((user: { id: number }) => user.id)) + 1;
-    });
+  const showAlert = (message: any) => {
+    setAlertMessage(message);
+    setAlertVisible(true);
+  };
 
-  const [error, setError] = useState<string | null>(null);
+  const handleAlertClose = () => {
+    setAlertVisible(false);
+  };
 
   const [companyOccupationValue, setCompanyOccupation] = useState<
     string | null
@@ -85,27 +81,36 @@ function Setup({ userData }: { userData: UserData | undefined }) {
   };
 
   const handleSignup = () => {
-    const completeUserData = {
-      id: id,
-      name: userData?.name,
-      company_name: userData?.company_name,
-      email: userData?.email,
-      password: userData?.password,
-      phone_number: userData?.phone_number,
-      company_details: {
-        company_occupation: companyOccupationValue,
-        company_size: companySizeValue,
-        company_revenue: companyRevenueValue,
-        about_info: infoInputText,
-      },
-    };
+    if (!companyOccupationValue) {
+      return showAlert("Fill out Company Occupation field");
+    } else if (!companySizeValue) {
+      return showAlert("Fill out Company Size field");
+    } else if (!companyRevenueValue) {
+      return showAlert("Fill out Company Revenue field");
+    } else {
+      const completeUserData = {
+        id: userData?.id,
+        firstName: userData?.firstName,
+        lastName: userData?.lastName,
+        companyName: userData?.companyName,
+        email: userData?.email,
+        password: userData?.password,
+        phoneNumber: userData?.phoneNumber,
+        companyDetails: {
+          companyOccupation: companyOccupationValue,
+          companySize: companySizeValue,
+          companyRevenue: companyRevenueValue,
+          aboutInfo: infoInputText,
+        },
+      };
 
-    fetch("http://localhost:3000/users/", {
-      method: "POST",
-      body: JSON.stringify(completeUserData),
-    });
+      fetch("http://localhost:3000/users/", {
+        method: "POST",
+        body: JSON.stringify(completeUserData),
+      });
 
-    router.navigate("/home");
+      router.navigate("/home/" + userData?.id);
+    }
   };
 
   const renderLabel = (
@@ -116,7 +121,9 @@ function Setup({ userData }: { userData: UserData | undefined }) {
     if (value || isFocus) {
       return (
         <View style={styles.LabelWrapper}>
-          <Text style={[styles.label, isFocus && { color: Colors.primary }]}>
+          <Text
+            style={[styles.label, isFocus ? { color: Colors.primary } : null]}
+          >
             {labelText}
           </Text>
         </View>
@@ -153,7 +160,7 @@ function Setup({ userData }: { userData: UserData | undefined }) {
               <Dropdown
                 style={[
                   styles.DropdownInput,
-                  isFocusOccupation && { borderColor: Colors.primary },
+                  isFocusOccupation ? { borderColor: Colors.primary } : null,
                 ]}
                 placeholderStyle={styles.PlaceholderStyle}
                 selectedTextStyle={styles.SelectedTextStyle}
@@ -188,7 +195,7 @@ function Setup({ userData }: { userData: UserData | undefined }) {
               <Dropdown
                 style={[
                   styles.DropdownInput,
-                  isFocusSize && { borderColor: Colors.primary },
+                  isFocusSize ? { borderColor: Colors.primary } : null,
                 ]}
                 placeholderStyle={styles.PlaceholderStyle}
                 selectedTextStyle={styles.SelectedTextStyle}
@@ -226,7 +233,7 @@ function Setup({ userData }: { userData: UserData | undefined }) {
               <Dropdown
                 style={[
                   styles.DropdownInput,
-                  isFocusSize && { borderColor: Colors.primary },
+                  isFocusSize ? { borderColor: Colors.primary } : null,
                 ]}
                 placeholderStyle={styles.PlaceholderStyle}
                 selectedTextStyle={styles.SelectedTextStyle}
@@ -261,7 +268,6 @@ function Setup({ userData }: { userData: UserData | undefined }) {
               style={styles.TextInput}
               value={infoInputText}
               label="How did you hear about us?"
-              errorText={error}
               password={false}
               onChangeText={setInfoInputText}
             ></TextField>
@@ -279,6 +285,11 @@ function Setup({ userData }: { userData: UserData | undefined }) {
           onPress={handleSignup}
         >
           <Text style={styles.SignupText}>Sign up</Text>
+          <CustomAlert
+            visible={alertVisible}
+            message={alertMessage}
+            onClose={handleAlertClose}
+          />
         </Pressable>
       </View>
     </SafeAreaView>

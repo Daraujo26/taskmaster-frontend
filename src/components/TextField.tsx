@@ -49,7 +49,7 @@ const TextField: React.FC<Props> = (props) => {
     color = "#B00020";
   }
 
-  const [passwordViewable, setPasswordViewable] = useState(false);
+  const [passwordViewable, setPasswordViewable] = useState(true);
   const handlePasswordViewer = () => {
     setPasswordViewable(!passwordViewable);
   };
@@ -80,7 +80,7 @@ const TextField: React.FC<Props> = (props) => {
           {password && (
             <Entypo
               onPress={handlePasswordViewer}
-              name={passwordViewable ? "eye" : "eye-with-line"}
+              name={!passwordViewable ? "eye" : "eye-with-line"}
               style={styles.EyeIcon}
               size={22}
             ></Entypo>

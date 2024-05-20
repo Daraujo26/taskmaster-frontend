@@ -8,44 +8,117 @@ import {
   ScrollView,
 } from "react-native";
 
-import { router, Link, useNavigation } from "expo-router";
+import { router, Link } from "expo-router";
 import { Image } from "expo-image";
 import { AntDesign } from "@expo/vector-icons";
 
-import Setup from "@/app/signup/StepTwoScreen";
-
 import Colors from "@/src/constants/colors/colors";
 import TextField from "@/src/components/TextField";
+import { E164Number } from "libphonenumber-js";
 
-interface UserData {
-  name: string;
-  company_name: string;
-  email: string;
-  password: string;
-  phone_number: string;
-}
+import { UserData } from "@/src/interfaces";
+import PhoneNumberInput from "@/src/components/PhoneInput";
 
-function showStepOne({ setUserData, setStepOne }: any) {
-  const [nameInputText, setNameInputText] = useState("");
+function showStepOne(this: any, { setUserData, setStepOne }: any) {
+  let id: number;
+  fetch("http://localhost:3000/users/")
+    .then((resp) => resp.json())
+    .then((data) => {
+      const userDatabase = data;
+      id = Math.max(...userDatabase.map((user: { id: number }) => user.id)) + 1;
+    });
+
+  const [firstNameInputText, setFirstNameInputText] = useState("");
+  const [lastNameInputText, setLastNameInputText] = useState("");
   const [companyNameInputText, setCompanyNameInputText] = useState("");
   const [emailInputText, setEmailInputText] = useState("");
   const [passwordInputText, setPasswordInputText] = useState("");
-  const [phoneNumberInput, setPhoneNumberInput] = useState("");
+  const [phoneNumberInput, setPhoneNumberInput] = useState<E164Number>();
 
-  const [error, setError] = useState<string | null>(null);
+  const [firstNameError, setFirstNameError] = useState<string | null>(null);
+  const [lastNameError, setLastNameError] = useState<string | null>(null);
+  const [companyNameError, setCompanyNameError] = useState<string | null>(null);
+  const [emailError, setEmailError] = useState<string | null>(null);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [phoneError, setPhoneError] = useState<string | null>(null);
 
   const handleBackButton = () => {
     router.back();
   };
 
-  const userData: UserData = {
-    name: nameInputText,
-    company_name: companyNameInputText,
-    email: emailInputText,
-    password: passwordInputText,
-    phone_number: phoneNumberInput,
-  };
   const handleSignup = () => {
+    setFirstNameError(null);
+    setLastNameError(null);
+    setCompanyNameError(null);
+    setEmailError(null);
+    setPasswordError(null);
+    setPhoneError(null);
+
+    if (firstNameInputText == "") {
+      return setFirstNameError("Enter first name");
+    }
+    if (lastNameInputText == "") {
+      return setLastNameError("Enter last name");
+    }
+    if (companyNameInputText == "") {
+      return setCompanyNameError("Enter company name");
+    }
+    if (emailInputText == "") {
+      return setEmailError("Enter email");
+    }
+    if (passwordInputText == "") {
+      return setPasswordError("Enter password");
+    }
+    if (phoneNumberInput == null) {
+      return setPhoneError("Enter phone number");
+    }
+
+    // email check
+    let re = /\S+@\S+\.\S+/;
+    let regex = /^[\+]?[(]?[0-9]{3}[)]?[-\s\.]?[0-9]{3}[-\s\.]?[0-9]{4,6}$/im;
+
+    if (!re.test(emailInputText) || regex.test(emailInputText)) {
+      return setEmailError("Enter a valid email address");
+    }
+    // password check
+    const isNonWhiteSpace = /^\S*$/;
+    if (!isNonWhiteSpace.test(passwordInputText)) {
+      return setPasswordError("Password must not contain Whitespaces");
+    }
+    const isContainsUppercase = /^(?=.*[A-Z]).*$/;
+    if (!isContainsUppercase.test(passwordInputText)) {
+      return setPasswordError(
+        "Password must have at least one Uppercase Character"
+      );
+    }
+    const isContainsLowercase = /^(?=.*[a-z]).*$/;
+    if (!isContainsLowercase.test(passwordInputText)) {
+      return setPasswordError(
+        "Password must have at least one Lowercase Character"
+      );
+    }
+    const isContainsNumber = /^(?=.*[0-9]).*$/;
+    if (!isContainsNumber.test(passwordInputText)) {
+      return setPasswordError("Password must contain at least one digit");
+    }
+    const isValidLength = /^.{8,16}$/;
+    if (!isValidLength.test(passwordInputText)) {
+      return setPasswordError("Password must be 8-16 Characters Long");
+    }
+
+    const userData: UserData = {
+      id: id,
+      firstName: firstNameInputText,
+      lastName: lastNameInputText,
+      companyName: companyNameInputText,
+      email: emailInputText,
+      password: passwordInputText,
+      phoneNumber: phoneNumberInput,
+      companyDetails: undefined,
+      companyData: undefined,
+      usageData: undefined,
+      teams: [],
+    };
     setStepOne(false);
     setUserData(userData);
     console.log(userData);
@@ -72,25 +145,33 @@ function showStepOne({ setUserData, setStepOne }: any) {
           <View style={styles.BodyTextInputWrapper}>
             <TextField
               style={styles.TextInput}
-              value={nameInputText}
-              label="Name"
-              errorText={error}
+              value={firstNameInputText}
+              label="First Name"
               password={false}
-              onChangeText={setNameInputText}
+              errorText={firstNameError}
+              onChangeText={setFirstNameInputText}
+            />
+            <TextField
+              style={styles.TextInput}
+              value={lastNameInputText}
+              label="Last Name"
+              password={false}
+              errorText={lastNameError}
+              onChangeText={setLastNameInputText}
             />
             <TextField
               style={styles.TextInput}
               value={companyNameInputText}
               label="Company Name"
-              errorText={error}
               password={false}
+              errorText={companyNameError}
               onChangeText={setCompanyNameInputText}
             />
             <TextField
               style={styles.TextInput}
               value={emailInputText}
               label="Email"
-              errorText={error}
+              errorText={emailError}
               password={false}
               onChangeText={setEmailInputText}
             />
@@ -98,19 +179,18 @@ function showStepOne({ setUserData, setStepOne }: any) {
               style={styles.PasswordInput}
               value={passwordInputText}
               label="Password"
-              errorText={error}
+              errorText={passwordError}
               password={true}
               onChangeText={(text) => setPasswordInputText(text)}
             />
-            <Text style={{ marginBottom: 10 }}>Minimum 8 Characters</Text>
-            <TextField
+            <PhoneNumberInput
               style={styles.TextInput}
-              value={phoneNumberInput}
-              label="Phone Number"
-              errorText={error}
-              password={false}
               onChangeText={setPhoneNumberInput}
+              label={"Phone Number"}
+              value={phoneNumberInput}
+              errorText={phoneError}
             />
+            <View style={{ height: 300 }}></View>
           </View>
         </ScrollView>
       </View>

@@ -4,17 +4,8 @@ import { SafeAreaView } from "react-native";
 
 import { router } from "expo-router";
 import { Image } from "expo-image";
-import * as Font from "expo-font";
 
 import Colors from "../src/constants/colors/colors";
-
-async function loadFonts() {
-  await Font.loadAsync({
-    "Nexa Bold": require("../src/assets/fonts/Nexa Bold.otf"),
-    "Nexa Light": require("../src/assets/fonts/Nexa Light.otf"),
-  });
-  console.log("Fonts loaded");
-}
 
 function Index() {
   const handleLogin = () => {
