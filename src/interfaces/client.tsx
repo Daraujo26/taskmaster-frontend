@@ -7,5 +7,11 @@ export interface Client {
   email?: string;
   clientNotes?: string; // optional and they won’t see this
   propertyAddress: string;
-  teamId: number;
+  userId?: number;
+}
+
+export interface ClientState {
+  loading: boolean;
+  clients: Client[];
+  error: string | null;
 }

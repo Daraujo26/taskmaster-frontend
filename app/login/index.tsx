@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -15,9 +15,15 @@ import { AntDesign } from "@expo/vector-icons";
 import Colors from "@/src/constants/colors/colors";
 import TextField from "@/src/components/TextField";
 
-import { UserData } from "@/src/interfaces";
+import { useAppDispatch } from "@/src/hooks/useAppDispatch";
+import { loginUser } from "@/src/redux/slices/userSlice";
+import { useSelector } from "@/src/hooks/useSelector";
+import { AppState } from "@/src/interfaces/state";
 
 function Index() {
+  const dispatch = useAppDispatch();
+  const userData = useSelector((state: AppState) => state.user);
+
   const [emailInputText, setEmailInputText] = useState("");
   const [passwordInputText, setPasswordInputText] = useState("");
 
@@ -33,36 +39,32 @@ function Index() {
 
   const handleLogin = () => {
     setEmailError(null);
+    setPasswordError(null);
 
     let re = /\S+@\S+\.\S+/;
     let regex = /^[\+]?[(]?[0-9]{3}[)]?[-\s\.]?[0-9]{3}[-\s\.]?[0-9]{4,6}$/im;
 
     if (!re.test(emailInputText) || regex.test(emailInputText)) {
       setEmailError("Enter a valid email address");
+      return;
     }
 
     if (re.test(emailInputText) && !regex.test(emailInputText)) {
-      fetch("http://localhost:3000/users/")
-        .then((resp) => resp.json())
-        .then((data) => {
-          const userData = data;
-
-          const user = userData.filter(
-            (user: { email: any; user: UserData }) =>
-              user["email"] === emailInputText
-          )[0];
-
-          if (user == undefined) {
-            console.log("Incorrect");
-          } else if (user["password"] === passwordInputText) {
-            console.log("Success");
-            router.navigate("/home/" + user.id);
-          } else {
-            console.log("Incorrect");
-          }
-        });
+      dispatch(
+        loginUser({ email: emailInputText, password: passwordInputText })
+      );
     }
   };
+
+  useEffect(() => {
+    if (!userData.loading && userData.user !== null && !userData.error) {
+      router.navigate("/home");
+    }
+    if (userData.error) {
+      console.log(userData.error);
+      setPasswordError(userData.error);
+    }
+  }, [userData]);
 
   return (
     <SafeAreaView style={styles.MainWrapper}>

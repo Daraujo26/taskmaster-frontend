@@ -1,45 +1,31 @@
-import { useLocalSearchParams } from "expo-router";
-import React, { useEffect, useState } from "react";
+import { useSegments } from "expo-router";
+import React from "react";
 
 import { View, Text, SafeAreaView, StyleSheet } from "react-native";
 
-import Navbar from "@/src/components/Navbar";
-
 import { UserData } from "@/src/interfaces";
+import BottomNavBar from "@/src/components/BottomNavBar";
+import { useSelector } from "@/src/hooks/useSelector";
 
 function Index() {
-  const [isLoading, setIsLoading] = useState(true);
-  const [userData, setUserData] = useState<UserData | null>(null);
+  const userData = useSelector((state) => state.user);
+  const segments = useSegments();
 
-  const userId = useLocalSearchParams()["id"];
-
-  useEffect(() => {
-    fetch("http://localhost:3000/users/")
-      .then((resp) => resp.json())
-      .then((data) => {
-        let user = data.filter(
-          (user: { [x: string]: string | string[] | undefined }) =>
-            user["id"] == userId
-        )[0];
-        if (user) {
-          setUserData(user);
-        }
-        setIsLoading(false);
-      });
-  });
+  const currentPath = segments[0] || "home";
+  const initialSelectedButton =
+    currentPath.charAt(0).toUpperCase() + currentPath.slice(1);
 
   return (
     <>
-      {isLoading ? (
+      {userData.loading ? (
         <Text>loading...</Text>
       ) : (
         <SafeAreaView style={{ flex: 1 }}>
           <View style={styles.HeaderWrapper}>
             <Text style={styles.HeaderText}>Search</Text>
           </View>
-          <View style={styles.BodyWrapper}></View>
-          <View style={styles.FooterWrapper}>
-            <Navbar id={userId} selectedButton="Search"></Navbar>
+          <View style={styles.BodyWrapper}>
+            <BottomNavBar initialSelectedButton={initialSelectedButton} />
           </View>
         </SafeAreaView>
       )}
@@ -59,7 +45,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   BodyWrapper: {
-    flex: 0.87,
+    flex: 0.95,
     backgroundColor: "lightblue",
   },
   FooterWrapper: {

@@ -18,15 +18,10 @@ import { E164Number } from "libphonenumber-js";
 
 import { UserData } from "@/src/interfaces";
 import PhoneNumberInput from "@/src/components/PhoneInput";
+import { useDispatch } from "react-redux";
 
 function showStepOne(this: any, { setUserData, setStepOne }: any) {
   let id: number;
-  fetch("http://localhost:3000/users/")
-    .then((resp) => resp.json())
-    .then((data) => {
-      const userDatabase = data;
-      id = Math.max(...userDatabase.map((user: { id: number }) => user.id)) + 1;
-    });
 
   const [firstNameInputText, setFirstNameInputText] = useState("");
   const [lastNameInputText, setLastNameInputText] = useState("");
@@ -118,6 +113,7 @@ function showStepOne(this: any, { setUserData, setStepOne }: any) {
       companyData: undefined,
       usageData: undefined,
       teams: [],
+      role: "",
     };
     setStepOne(false);
     setUserData(userData);

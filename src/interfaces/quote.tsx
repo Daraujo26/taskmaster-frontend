@@ -6,7 +6,7 @@ export interface Quote {
   jobTitle: string;
   contractItems: ContractItemsHolder[];
   message: string;
-  status: "draft" | "sent" | "accepted" | "rejected";
+  status: "sent" | "viewed" | "accepted" | "rejected";
   dateIssued: Date;
   dateUpdated: Date;
   teamId: number;

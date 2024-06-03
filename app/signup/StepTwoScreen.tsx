@@ -1,4 +1,4 @@
-import React, { useContext, useState } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -6,9 +6,10 @@ import {
   StyleSheet,
   Pressable,
   ScrollView,
+  Alert,
 } from "react-native";
 
-import { router, useLocalSearchParams } from "expo-router";
+import { router } from "expo-router";
 import { Image } from "expo-image";
 import { AntDesign } from "@expo/vector-icons";
 
@@ -16,10 +17,17 @@ import Colors from "@/src/constants/colors/colors";
 import TextField from "@/src/components/TextField";
 import { Dropdown } from "react-native-element-dropdown";
 
-import { UserData } from "@/src/interfaces";
+import { CompanyDetails, UserData } from "@/src/interfaces";
 import CustomAlert from "@/src/components/CustomAlert";
+import { useSelector } from "react-redux";
+import { signupUser, resetError } from "@/src/redux/slices/userSlice";
+import { AppState } from "@/src/interfaces/state";
+import { useAppDispatch } from "@/src/hooks/useAppDispatch";
 
-function Setup({ userData }: { userData: UserData | undefined }) {
+function Setup({ userData }: { userData: UserData }) {
+  const user = useSelector((state: AppState) => state.user);
+  const dispatch = useAppDispatch();
+
   const [alertVisible, setAlertVisible] = useState(false);
   const [alertMessage, setAlertMessage] = useState("");
 
@@ -30,6 +38,7 @@ function Setup({ userData }: { userData: UserData | undefined }) {
 
   const handleAlertClose = () => {
     setAlertVisible(false);
+    dispatch(resetError());
   };
 
   const [companyOccupationValue, setCompanyOccupation] = useState<
@@ -88,30 +97,42 @@ function Setup({ userData }: { userData: UserData | undefined }) {
     } else if (!companyRevenueValue) {
       return showAlert("Fill out Company Revenue field");
     } else {
-      const completeUserData = {
-        id: userData?.id,
-        firstName: userData?.firstName,
-        lastName: userData?.lastName,
-        companyName: userData?.companyName,
-        email: userData?.email,
-        password: userData?.password,
-        phoneNumber: userData?.phoneNumber,
-        companyDetails: {
-          companyOccupation: companyOccupationValue,
-          companySize: companySizeValue,
-          companyRevenue: companyRevenueValue,
-          aboutInfo: infoInputText,
-        },
+      const companyDetails: CompanyDetails = {
+        occupation: companyOccupationValue,
+        size: Number(companySizeValue),
+        revenue: companyRevenueValue,
+        about: infoInputText,
       };
 
-      fetch("http://localhost:3000/users/", {
-        method: "POST",
-        body: JSON.stringify(completeUserData),
-      });
+      const completeUserData: UserData = {
+        id: userData.id,
+        firstName: userData.firstName,
+        lastName: userData.lastName,
+        companyName: userData.companyName,
+        email: userData.email,
+        password: userData.password,
+        phoneNumber: userData.phoneNumber,
+        companyDetails: companyDetails,
+        companyData: undefined,
+        usageData: undefined,
+        teams: [],
+        role: "USER",
+      };
 
-      router.navigate("/home/" + userData?.id);
+      console.log(completeUserData);
+
+      dispatch(signupUser(completeUserData));
     }
   };
+
+  useEffect(() => {
+    if (!user.loading && user.user !== null && !user.error) {
+      router.navigate("/home");
+    }
+    if (user.error) {
+      showAlert(user.error);
+    }
+  }, [user]);
 
   const renderLabel = (
     value: string | null,

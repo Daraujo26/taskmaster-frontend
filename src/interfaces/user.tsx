@@ -22,12 +22,13 @@ export interface UserData {
   companyData?: CompanyData;
   usageData?: UsageData;
   teams: TeamMembership[];
+  role: String;
 }
 
 export interface CompanyDetails {
   occupation: string;
   size: number;
-  revenue: number;
+  revenue: string;
   about: string;
 }
 
