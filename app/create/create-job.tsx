@@ -7,229 +7,395 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Platform,
   SafeAreaView,
+  Platform,
 } from "react-native";
 import DateTimePicker, {
   DateTimePickerEvent,
 } from "@react-native-community/datetimepicker";
 import { useRouter } from "expo-router";
+import { useSelector } from "@/src/hooks/useSelector";
 import { Ionicons } from "@expo/vector-icons";
 import Colors from "@/src/constants/colors/colors";
+import ClientSelection from "@/src/components/ClientSelection";
+import ContractItemSelection from "@/src/components/ContractItemSelection";
+import { Client } from "@/src/interfaces/client";
+import { useAppDispatch } from "@/src/hooks/useAppDispatch";
+import { addJob } from "@/src/redux/slices/jobSlice";
+import { Job } from "@/src/interfaces/job";
+import CustomAlert from "@/src/components/CustomAlert";
+import { format } from "date-fns";
+import { useContractItem } from "@/src/components/ContractItemContext";
+import { ContractItem } from "@/src/interfaces/contractItem";
 
 const JobForm = () => {
   const router = useRouter();
-  const [client, setClient] = useState("");
+  const dispatch = useAppDispatch();
+  const contractItems = useSelector(
+    (state) => state.contractItems.contractItems
+  );
+
+  const { selectedItems, addItem, resetItems } = useContractItem();
+
+  const [client, setClient] = useState<Client | null>(null);
   const [jobTitle, setJobTitle] = useState("");
   const [message, setMessage] = useState("");
-  const [contractItems, setContractItems] = useState([]);
-  const [jobDates, setJobDates] = useState<Date[]>([]);
+  const [dates, setDates] = useState<Date[]>([]);
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [startTime, setStartTime] = useState(new Date());
   const [showStartTimePicker, setShowStartTimePicker] = useState(false);
   const [endTime, setEndTime] = useState(new Date());
   const [showEndTimePicker, setShowEndTimePicker] = useState(false);
-  const [status, setStatus] = useState("planned");
+  const [status, setStatus] = useState<Job["status"]>("planned");
+  const [showClientSelection, setShowClientSelection] = useState(false);
+  const [showContractItemSelection, setShowContractItemSelection] =
+    useState(false);
+  const [alertVisible, setAlertVisible] = useState(false);
+  const [alertMessage, setAlertMessage] = useState("");
 
-  const handleAddItem = () => {
-    // Logic to add a new contract item
+  const handleAlertClose = () => {
+    setAlertVisible(false);
+  };
+
+  const showAlert = (message: any) => {
+    setAlertMessage(message);
+    setAlertVisible(true);
   };
 
   const handleSubmit = () => {
-    // Logic to handle form submission
-    router.push("/jobs"); // Navigate back to jobs page
+    if (
+      !client ||
+      !jobTitle ||
+      !message ||
+      Object.keys(selectedItems).length === 0
+    ) {
+      showAlert(
+        "Client, Job Title, Message, and at least one Contract Item are required"
+      );
+      return;
+    }
+
+    const contractItems = Object.keys(selectedItems).reduce(
+      (acc: any, id: any) => {
+        acc[id] = selectedItems[id].quantity;
+        return acc;
+      },
+      {}
+    );
+
+    const job = {
+      id: 0,
+      client: client.id,
+      jobTitle,
+      message,
+      contractItems,
+      jobDates: dates,
+      startTime: startTime.toISOString(),
+      endTime: endTime.toISOString(),
+      status,
+    };
+
+    dispatch(addJob(job))
+      .unwrap()
+      .then(() => {
+        resetItems();
+        router.back();
+      })
+      .catch((error) => {
+        console.error("Failed to add job:", error);
+        showAlert("Failed to add job");
+      });
+  };
+
+  const handleDateChange = (
+    event: DateTimePickerEvent,
+    selectedDate: Date | undefined
+  ) => {
+    if (selectedDate) {
+      setDates((prevDates) => [...prevDates, selectedDate]);
+    }
+    setShowDatePicker(false);
   };
 
   const handleStartTimeChange = (
     event: DateTimePickerEvent,
-    selectedDate: Date | undefined
+    selectedTime: Date | undefined
   ) => {
-    const currentDate = selectedDate || startTime;
+    const currentTime = selectedTime || startTime;
     setShowStartTimePicker(Platform.OS === "ios");
-    setStartTime(currentDate);
+    setStartTime(currentTime);
   };
 
   const handleEndTimeChange = (
     event: DateTimePickerEvent,
-    selectedDate: Date | undefined
+    selectedTime: Date | undefined
   ) => {
-    const currentDate = selectedDate || endTime;
+    const currentTime = selectedTime || endTime;
     setShowEndTimePicker(Platform.OS === "ios");
-    setEndTime(currentDate);
+    setEndTime(currentTime);
+  };
+
+  const handleClientSelect = (selectedClient: Client) => {
+    setClient(selectedClient);
+    setShowClientSelection(false);
+  };
+
+  const handleSelectContractItem = (item: ContractItem, quantity: number) => {
+    addItem(item, quantity);
+    setShowContractItemSelection(false);
+  };
+
+  const calculateSubtotal = () => {
+    return Object.values(selectedItems).reduce(
+      (total, { contractItemId, quantity }) => {
+        const item = contractItems.find(
+          (item: ContractItem) => item.id === contractItemId
+        );
+        return item ? total + item.itemPrice * quantity : total;
+      },
+      0
+    );
   };
 
   return (
-    <SafeAreaView style={{ backgroundColor: Colors.background }}>
-      <ScrollView contentContainerStyle={styles.container}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Create Job</Text>
-          <TouchableOpacity
-            onPress={() => router.back()}
-            style={styles.closeButton}
-          >
-            <Ionicons name="close" size={24} color={Colors.primary} />
-          </TouchableOpacity>
-        </View>
-        <View style={styles.formGroup}>
-          <Text style={styles.label}>Client</Text>
-          <TextInput
-            style={styles.input}
-            value={client}
-            onChangeText={setClient}
-            placeholder="Select Client"
-          />
-        </View>
-        <View style={styles.formGroup}>
-          <Text style={styles.label}>Job Title</Text>
-          <TextInput
-            style={styles.input}
-            value={jobTitle}
-            onChangeText={setJobTitle}
-            placeholder="Enter Job Title"
-          />
-        </View>
-        <View style={styles.formGroup}>
-          <Text style={styles.label}>Message</Text>
-          <TextInput
-            style={styles.textArea}
-            value={message}
-            onChangeText={setMessage}
-            placeholder="Enter Message"
-            multiline
-          />
-        </View>
-        <View style={styles.formGroup}>
-          <Text style={styles.label}>Job Dates</Text>
-          <TouchableOpacity onPress={() => setShowStartTimePicker(true)}>
-            <Text style={styles.dateText}>
-              {startTime.toISOString().split("T")[0]}
-            </Text>
-          </TouchableOpacity>
-          {showStartTimePicker && (
-            <DateTimePicker
-              value={startTime}
-              mode="date"
-              display="default"
-              onChange={handleStartTimeChange}
+    <SafeAreaView style={{ flex: 1, backgroundColor: Colors.background }}>
+      {showClientSelection ? (
+        <ClientSelection onSelectClient={handleClientSelect} />
+      ) : showContractItemSelection ? (
+        <ContractItemSelection
+          onSelectItem={handleSelectContractItem}
+          onClose={() => setShowContractItemSelection(false)}
+        />
+      ) : (
+        <ScrollView contentContainerStyle={styles.container}>
+          <View style={styles.header}>
+            <Text style={styles.title}>Create Job</Text>
+            <TouchableOpacity
+              onPress={() => {
+                resetItems();
+                router.back();
+              }}
+              style={styles.closeButton}
+            >
+              <Ionicons name="close" size={24} color={Colors.primary} />
+            </TouchableOpacity>
+          </View>
+          <View style={styles.formGroup}>
+            <Text style={styles.label}>Client</Text>
+            <TouchableOpacity
+              style={styles.input}
+              onPress={() => setShowClientSelection(true)}
+            >
+              <Text>
+                {client
+                  ? `${client.firstName} ${client.lastName}`
+                  : "Select Client"}
+              </Text>
+            </TouchableOpacity>
+          </View>
+          <View style={styles.formGroup}>
+            <Text style={styles.label}>Job Title</Text>
+            <TextInput
+              style={styles.input}
+              value={jobTitle}
+              onChangeText={setJobTitle}
+              placeholder="Enter Job Title"
             />
-          )}
-        </View>
-        <View style={styles.formGroup}>
-          <Text style={styles.label}>Start Time</Text>
-          <TouchableOpacity onPress={() => setShowStartTimePicker(true)}>
-            <Text style={styles.dateText}>
-              {startTime.toLocaleTimeString()}
-            </Text>
-          </TouchableOpacity>
-          {showStartTimePicker && (
-            <DateTimePicker
-              value={startTime}
-              mode="time"
-              display="default"
-              onChange={handleStartTimeChange}
+          </View>
+          <View style={styles.formGroup}>
+            <Text style={styles.label}>Message</Text>
+            <TextInput
+              style={styles.textArea}
+              value={message}
+              onChangeText={setMessage}
+              placeholder="Enter Message"
+              multiline
             />
-          )}
-        </View>
-        <View style={styles.formGroup}>
-          <Text style={styles.label}>End Time</Text>
-          <TouchableOpacity onPress={() => setShowEndTimePicker(true)}>
-            <Text style={styles.dateText}>{endTime.toLocaleTimeString()}</Text>
-          </TouchableOpacity>
-          {showEndTimePicker && (
-            <DateTimePicker
-              value={endTime}
-              mode="time"
-              display="default"
-              onChange={handleEndTimeChange}
+          </View>
+          <View style={styles.formGroup}>
+            <Text style={styles.label}>Dates</Text>
+            <Button
+              title="Add Date"
+              onPress={() => setShowDatePicker(true)}
+              color={Colors.primary}
             />
-          )}
-        </View>
-        <View style={styles.formGroup}>
-          <Text style={styles.label}>Status</Text>
-          <View style={styles.statusContainer}>
-            {["planned", "in-progress", "completed"].map((stat) => (
-              <TouchableOpacity
-                key={stat}
-                style={[
-                  styles.statusButton,
-                  status === stat && styles.selectedStatusButton,
-                ]}
-                onPress={() => setStatus(stat)}
-              >
-                <Text
-                  style={[
-                    styles.statusButtonText,
-                    status === stat && styles.selectedStatusButtonText,
-                  ]}
-                >
-                  {stat.charAt(0).toUpperCase() + stat.slice(1)}
-                </Text>
-              </TouchableOpacity>
+            {showDatePicker && (
+              <DateTimePicker
+                value={new Date()}
+                mode="date"
+                display="default"
+                onChange={handleDateChange}
+              />
+            )}
+            {dates.map((date, index) => (
+              <Text key={index} style={styles.dateText}>
+                {format(date, "MMMM dd, yyyy")}
+              </Text>
             ))}
           </View>
-        </View>
-        <View style={styles.formGroup}>
-          <Text style={styles.label}>Contract Items</Text>
-          {contractItems.map((item: any, index) => (
-            <View key={index} style={styles.contractItem}>
-              <Text>{item.itemName}</Text>
-              <Text>{item.quantity}</Text>
+          <View style={styles.formGroup}>
+            <Text style={styles.label}>Start Time</Text>
+            <TouchableOpacity onPress={() => setShowStartTimePicker(true)}>
+              <Text style={styles.input}>
+                {startTime.toLocaleTimeString([], {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                  hour12: true,
+                })}
+              </Text>
+            </TouchableOpacity>
+            {showStartTimePicker ? (
+              <>
+                <DateTimePicker
+                  value={startTime}
+                  mode="time"
+                  display="default"
+                  minuteInterval={5}
+                  onChange={handleStartTimeChange}
+                />
+                <Text>{format(new Date(), "MMMM dd, yyyy")}</Text>
+              </>
+            ) : (
+              <Text></Text>
+            )}
+          </View>
+          <View style={styles.formGroup}>
+            <Text style={styles.label}>End Time</Text>
+            <TouchableOpacity onPress={() => setShowEndTimePicker(true)}>
+              <Text style={styles.input}>
+                {endTime.toLocaleTimeString([], {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                  hour12: true,
+                })}
+              </Text>
+            </TouchableOpacity>
+            {showEndTimePicker ? (
+              <>
+                <DateTimePicker
+                  value={endTime}
+                  mode="time"
+                  display="default"
+                  minuteInterval={5}
+                  onChange={handleEndTimeChange}
+                />
+                <Text>{format(new Date(), "MMMM dd, yyyy")}</Text>
+              </>
+            ) : (
+              <Text></Text>
+            )}
+          </View>
+          <View style={styles.formGroup}>
+            <Text style={styles.label}>Contract Items</Text>
+            <TouchableOpacity
+              style={styles.input}
+              onPress={() => setShowContractItemSelection(true)}
+            >
+              <Text>Select Contract Items</Text>
+            </TouchableOpacity>
+            {Object.entries(selectedItems).map(
+              ([contractItemId, { quantity }]) => {
+                const item = contractItems.find(
+                  (item: ContractItem) => item.id === parseInt(contractItemId)
+                );
+                return (
+                  <View key={contractItemId} style={styles.itemRow}>
+                    <Text>{item?.itemName}</Text>
+                    <Text>
+                      ${item?.itemPrice} x {quantity}
+                    </Text>
+                  </View>
+                );
+              }
+            )}
+          </View>
+          <View style={styles.formGroup}>
+            <Text style={styles.label}>Subtotal: ${calculateSubtotal()}</Text>
+          </View>
+          <View style={styles.formGroup}>
+            <Text style={styles.label}>Status</Text>
+            <View style={styles.statusContainer}>
+              {["planned", "in_progress", "completed"].map((statusOption) => (
+                <TouchableOpacity
+                  key={statusOption}
+                  style={[
+                    styles.statusButton,
+                    status === statusOption && styles.selectedStatusButton,
+                  ]}
+                  onPress={() => setStatus(statusOption as Job["status"])}
+                >
+                  <Text
+                    style={[
+                      styles.statusButtonText,
+                      status === statusOption &&
+                        styles.selectedStatusButtonText,
+                    ]}
+                  >
+                    {statusOption.charAt(0).toUpperCase() +
+                      statusOption.slice(1).replace("_", " ")}
+                  </Text>
+                </TouchableOpacity>
+              ))}
             </View>
-          ))}
-          <Button title="Add Item" onPress={handleAddItem} />
-        </View>
-        <View style={styles.buttonContainer}>
-          <Button
-            title="Create Job"
-            onPress={handleSubmit}
-            color={Colors.primary}
-          />
-        </View>
-      </ScrollView>
+          </View>
+          <Button title="Submit" onPress={handleSubmit} />
+        </ScrollView>
+      )}
+      <CustomAlert
+        visible={alertVisible}
+        message={alertMessage}
+        onClose={handleAlertClose}
+      />
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    padding: 20,
-    backgroundColor: Colors.background,
-    flexGrow: 1,
+    paddingHorizontal: 16,
+    paddingBottom: 24,
   },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 20,
+    marginBottom: 16,
   },
   title: {
     fontSize: 24,
     fontWeight: "bold",
   },
   closeButton: {
-    padding: 5,
+    padding: 8,
   },
   formGroup: {
-    marginBottom: 20,
+    marginBottom: 16,
   },
   label: {
     fontSize: 16,
-    marginBottom: 5,
+    marginBottom: 8,
   },
   input: {
-    height: 40,
-    borderColor: "#ccc",
     borderWidth: 1,
-    borderRadius: 5,
-    padding: 10,
-    backgroundColor: "#fff",
+    borderColor: "#ccc",
+    borderRadius: 8,
+    padding: 8,
   },
   textArea: {
-    height: 80,
-    borderColor: "#ccc",
     borderWidth: 1,
-    borderRadius: 5,
-    padding: 10,
-    backgroundColor: "#fff",
+    borderColor: "#ccc",
+    borderRadius: 8,
+    padding: 8,
+    height: 100,
+  },
+  itemRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingVertical: 8,
+  },
+  dateText: {
+    marginVertical: 4,
   },
   statusContainer: {
     flexDirection: "row",
@@ -237,11 +403,12 @@ const styles = StyleSheet.create({
   },
   statusButton: {
     flex: 1,
-    padding: 10,
-    marginHorizontal: 5,
-    borderRadius: 5,
-    backgroundColor: "#ddd",
+    padding: 8,
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderRadius: 8,
     alignItems: "center",
+    marginHorizontal: 4,
   },
   selectedStatusButton: {
     backgroundColor: Colors.primary,
@@ -251,26 +418,6 @@ const styles = StyleSheet.create({
   },
   selectedStatusButtonText: {
     color: "#fff",
-  },
-  datePicker: {
-    width: "100%",
-  },
-  dateText: {
-    fontSize: 16,
-    padding: 10,
-    borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 5,
-    backgroundColor: "#fff",
-    textAlign: "center",
-  },
-  contractItem: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 10,
-  },
-  buttonContainer: {
-    marginTop: 20,
   },
 });
 

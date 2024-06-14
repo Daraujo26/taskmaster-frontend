@@ -1,15 +1,17 @@
-import { Client } from "./client";
-import { ContractItemsHolder } from "./quote";
-
 export interface Job {
   id: number;
-  client: Client;
+  client: number;
   jobTitle: string;
   message: string;
-  contractItems: ContractItemsHolder[];
+  contractItems: { contractItemId: number; quantity: number }[];
   jobDates: Date[];
-  startTime: string; // Time in ISO 8601 format
-  endTime: string; // Time in ISO 8601 format
+  startTime: string;
+  endTime: string;
   status: "planned" | "in-progress" | "completed";
-  teamId: number;
+}
+
+export interface JobState {
+  loading: boolean;
+  jobs: Job[];
+  error: string | null;
 }
