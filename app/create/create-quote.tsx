@@ -16,17 +16,35 @@ import DateTimePicker, {
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import Colors from "@/src/constants/colors/colors";
+import ClientSelection from "@/src/components/ClientSelection";
+import { Client } from "@/src/interfaces/client";
+import { useContractItem } from "@/src/components/ContractItemContext";
+import { ContractItem } from "@/src/interfaces/contractItem";
+import { useSelector } from "@/src/hooks/useSelector";
+import ContractItemSelection from "@/src/components/ContractItemSelection";
 
 const QuoteForm = () => {
   const router = useRouter();
-  const [client, setClient] = useState("");
+  const [client, setClient] = useState<Client | null>(null);
   const [jobTitle, setJobTitle] = useState("");
-  const [contractItems, setContractItems] = useState([]);
+  const contractItems = useSelector(
+    (state) => state.contractItems.contractItems
+  );
   const [message, setMessage] = useState("");
-  const [dateIssued, setDateIssued] = useState(new Date());
-  const [showDateIssuedPicker, setShowDateIssuedPicker] = useState(false);
-  const [dateUpdated, setDateUpdated] = useState(new Date());
-  const [showDateUpdatedPicker, setShowDateUpdatedPicker] = useState(false);
+  const [showClientSelection, setShowClientSelection] = useState(false);
+  const [showContractItemSelection, setShowContractItemSelection] =
+    useState(false);
+  const { selectedItems, addItem, resetItems } = useContractItem();
+
+  const handleSelectContractItem = (item: ContractItem, quantity: number) => {
+    addItem(item, quantity);
+    setShowContractItemSelection(false);
+  };
+
+  const handleClientSelect = (selectedClient: Client) => {
+    setClient(selectedClient);
+    setShowClientSelection(false);
+  };
 
   const handleAddItem = () => {
     // Logic to add a new contract item
@@ -37,114 +55,102 @@ const QuoteForm = () => {
     router.push("/quotes"); // Navigate back to quotes page
   };
 
-  const handleDateIssuedChange = (
-    event: DateTimePickerEvent,
-    selectedDate: Date | undefined
-  ) => {
-    const currentDate = selectedDate || dateIssued;
-    setShowDateIssuedPicker(Platform.OS === "ios");
-    setDateIssued(currentDate);
-  };
-
-  const handleDateUpdatedChange = (
-    event: DateTimePickerEvent,
-    selectedDate: Date | undefined
-  ) => {
-    const currentDate = selectedDate || dateUpdated;
-    setShowDateUpdatedPicker(Platform.OS === "ios");
-    setDateUpdated(currentDate);
+  const calculateSubtotal = () => {
+    return Object.values(selectedItems).reduce(
+      (total, { contractItemId, quantity }) => {
+        const item = contractItems.find(
+          (item: ContractItem) => item.id === contractItemId
+        );
+        return item ? total + item.itemPrice * quantity : total;
+      },
+      0
+    );
   };
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: Colors.background }}>
-      <ScrollView contentContainerStyle={styles.container}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Create Quote</Text>
-          <TouchableOpacity
-            onPress={() => router.back()}
-            style={styles.closeButton}
-          >
-            <Ionicons name="close" size={24} color={Colors.primary} />
-          </TouchableOpacity>
-        </View>
-        <View style={styles.formGroup}>
-          <Text style={styles.label}>Client</Text>
-          <TextInput
-            style={styles.input}
-            value={client}
-            onChangeText={setClient}
-            placeholder="Select Client"
-          />
-        </View>
-        <View style={styles.formGroup}>
-          <Text style={styles.label}>Job Title</Text>
-          <TextInput
-            style={styles.input}
-            value={jobTitle}
-            onChangeText={setJobTitle}
-            placeholder="Enter Job Title"
-          />
-        </View>
-        <View style={styles.formGroup}>
-          <Text style={styles.label}>Message</Text>
-          <TextInput
-            style={styles.textArea}
-            value={message}
-            onChangeText={setMessage}
-            placeholder="Enter Message"
-            multiline
-          />
-        </View>
-        <View style={styles.formGroup}>
-          <Text style={styles.label}>Date Issued</Text>
-          <TouchableOpacity onPress={() => setShowDateIssuedPicker(true)}>
-            <Text style={styles.dateText}>
-              {dateIssued.toISOString().split("T")[0]}
-            </Text>
-          </TouchableOpacity>
-          {showDateIssuedPicker && (
-            <DateTimePicker
-              value={dateIssued}
-              mode="date"
-              display="default"
-              onChange={handleDateIssuedChange}
+      {showClientSelection ? (
+        <ClientSelection onSelectClient={handleClientSelect} />
+      ) : showContractItemSelection ? (
+        <ContractItemSelection
+          onSelectItem={handleSelectContractItem}
+          onClose={() => setShowContractItemSelection(false)}
+        />
+      ) : (
+        <ScrollView contentContainerStyle={styles.container}>
+          <View style={styles.header}>
+            <Text style={styles.title}>Create Quote</Text>
+            <TouchableOpacity
+              onPress={() => {
+                resetItems();
+                router.back();
+              }}
+              style={styles.closeButton}
+            >
+              <Ionicons name="close" size={24} color={Colors.primary} />
+            </TouchableOpacity>
+          </View>
+          <View style={styles.formGroup}>
+            <Text style={styles.label}>Client</Text>
+            <TouchableOpacity
+              style={styles.input}
+              onPress={() => setShowClientSelection(true)}
+            >
+              <Text>
+                {client
+                  ? `${client.firstName} ${client.lastName}`
+                  : "Select Client"}
+              </Text>
+            </TouchableOpacity>
+          </View>
+          <View style={styles.formGroup}>
+            <Text style={styles.label}>Job Title</Text>
+            <TextInput
+              style={styles.input}
+              value={jobTitle}
+              onChangeText={setJobTitle}
+              placeholder="Enter Job Title"
             />
-          )}
-        </View>
-        <View style={styles.formGroup}>
-          <Text style={styles.label}>Date Updated</Text>
-          <TouchableOpacity onPress={() => setShowDateUpdatedPicker(true)}>
-            <Text style={styles.dateText}>
-              {dateUpdated.toISOString().split("T")[0]}
-            </Text>
-          </TouchableOpacity>
-          {showDateUpdatedPicker && (
-            <DateTimePicker
-              value={dateUpdated}
-              mode="date"
-              display="default"
-              onChange={handleDateUpdatedChange}
+          </View>
+          <View style={styles.formGroup}>
+            <Text style={styles.label}>Message</Text>
+            <TextInput
+              style={styles.textArea}
+              value={message}
+              onChangeText={setMessage}
+              placeholder="Enter Message"
+              multiline
             />
-          )}
-        </View>
-        <View style={styles.formGroup}>
-          <Text style={styles.label}>Contract Items</Text>
-          {contractItems.map((item: any, index) => (
-            <View key={index} style={styles.contractItem}>
-              <Text>{item.itemName}</Text>
-              <Text>{item.quantity}</Text>
-            </View>
-          ))}
-          <Button title="Add Item" onPress={handleAddItem} />
-        </View>
-        <View style={styles.buttonContainer}>
-          <Button
-            title="Create Quote"
-            onPress={handleSubmit}
-            color={Colors.primary}
-          />
-        </View>
-      </ScrollView>
+          </View>
+          <View style={styles.formGroup}>
+            <Text style={styles.label}>Contract Items</Text>
+            <TouchableOpacity
+              style={styles.input}
+              onPress={() => setShowContractItemSelection(true)}
+            >
+              <Text>Select Contract Items</Text>
+            </TouchableOpacity>
+            {Object.entries(selectedItems).map(
+              ([contractItemId, { quantity }]) => {
+                const item = contractItems.find(
+                  (item: ContractItem) => item.id === parseInt(contractItemId)
+                );
+                return (
+                  <View key={contractItemId} style={styles.itemRow}>
+                    <Text>{item?.itemName}</Text>
+                    <Text>
+                      ${item?.itemPrice} x {quantity}
+                    </Text>
+                  </View>
+                );
+              }
+            )}
+          </View>
+          <View style={styles.formGroup}>
+            <Text style={styles.label}>Subtotal: ${calculateSubtotal()}</Text>
+          </View>
+        </ScrollView>
+      )}
     </SafeAreaView>
   );
 };
@@ -160,6 +166,11 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 20,
+  },
+  itemRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingVertical: 8,
   },
   title: {
     fontSize: 24,
